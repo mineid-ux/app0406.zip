@@ -1,0 +1,106 @@
+다음 기능을 가지는 "변수 관계 시각화(산점도)" 프로그램을 파이썬으로 작성해 줘.
+
+[인터페이스 설명]
+- 사용자 인터페이스는 streamlit 사용.
+- 화면의 위에서부터 파일 업로드, 데이터 미리보기, 변수 선택 및 옵션, 그래프 시각화 순서로 배치.
+
+[기능]
+- CSV 파일 업로드: 사용자가 로컬 PC에서 CSV 파일을 선택하여 업로드할 수 있는 기능을 구현한다.
+- 데이터 미리보기: 업로드된 데이터의 상위 5개 행(head)을 표 형태로 화면에 출력한다.
+- 변수 및 옵션 선택: X축과 Y축으로 사용할 컬럼을 드롭다운 메뉴로 선택한다.
+- 데이터의 범주(예: 전공, 과목 등)에 따라 점의 색상을 다르게 표시할 수 있는 선택 메뉴를 제공한다.
+- 추세선(회귀선) 표시 여부를 결정할 수 있는 체크박스를 포함한다.[데이터 설명]
+
+[데이터 설명]
+- 입력 데이터는 숫자형 데이터(공부시간, 점수 등)와 범주형 데이터(전공, 과목명 등)가 혼합된 CSV 파일이다.
+- 범례에는 각 데이터 포인트가 어떤 그룹(과목명 등)에 속하는지 한글 이름이 명확하게 표시되어야 한다.
+
+[코드 작성 요구사항]
+- 최대한 간결하게 작성 (불필요한 코드 제외)
+- 기능별로 함수를 만들어서 구현
+- 이모티콘 사용하지 말 것
+- 각 함수와 주요 코드에 주석 포함
+
+==========================
+위 프로그램에 아래의 기능을 추가해 줘
+그래프 내 마이너스 기호가 깨지는 현상을 방지하는 코드를 포함해 줘.
+
+
+import streamlit as st
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+import platform
+
+
+# 한글 폰트 설정 함수
+def set_korean_font():
+    system_name = platform.system()
+    if system_name == "Windows":
+        plt.rc('font', family='Malgun Gothic')
+    elif system_name == "Darwin":  # Mac
+        plt.rc('font', family='AppleGothic')
+    else:  # Linux
+        plt.rc('font', family='NanumGothic')
+    plt.rc('axes', unicode_minus=False)
+
+
+# 데이터 로드 함수
+def load_data(file):
+    return pd.read_csv(file)
+
+
+# 산점도 그래프 생성 및 출력 함수
+def display_scatter_plot(df, x_col, y_col, hue_col, show_reg):
+    fig, ax = plt.subplots(figsize=(10, 6))
+
+    if show_reg:
+        # 추세선(회귀선) 및 산점도 시각화
+        sns.regplot(data=df, x=x_col, y=y_col, ax=ax, scatter=False, color='red')
+
+    # 범주별 색상 구분을 포함한 산점도
+    sns.scatterplot(data=df, x=x_col, y=y_col, hue=hue_col, ax=ax, s=100)
+
+    ax.set_title(f"{x_col}와(과) {y_col}의 관계 (Scatter Plot)")
+    ax.set_xlabel(x_col)
+    ax.set_ylabel(y_col)
+    ax.grid(True, linestyle='--', alpha=0.6)
+
+    st.pyplot(fig)
+
+
+# 메인 실행 함수
+def main():
+    st.title("산점도 그래프로 데이터 비교")
+    set_korean_font()
+
+    # 1. 파일 업로드
+    uploaded_file = st.file_uploader("CSV 파일을 업로드하세요", type=["csv"])
+
+    if uploaded_file is not None:
+        df = load_data(uploaded_file)
+
+        # 2. 데이터 확인
+        st.subheader("데이터 확인")
+        st.write(df.head())
+
+        # 3. 비교 항목 선택
+        st.subheader("비교 항목 선택")
+        cols = df.columns.tolist()
+        num_cols = df.select_dtypes(include=['number']).columns.tolist()
+
+        col1, col2 = st.columns(2)
+        with col1:
+            x_axis = st.selectbox("X축(설명 변수) 선택", num_cols)
+        with col2:
+            y_axis = st.selectbox("Y축(반응 변수) 선택", num_cols)
+
+        hue_axis = st.selectbox("색상으로 구분할 범주 컬럼(선택)", [None] + cols)
+        show_reg = st.checkbox("추세선(회귀선) 표시", value=True)
+
+        # 4. 그래프 생성 버튼 및 시각화
+        if st.button("그래프 생성"):
+            display_scatter_plot(df, x_axis, y_axis, hue_axis, show_reg)
+
+
+if __name__ == "__main__":
